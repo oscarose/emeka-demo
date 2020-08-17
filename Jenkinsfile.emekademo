@@ -1,0 +1,45 @@
+pipeline {
+    agent {
+        label'master'
+    }
+    parameters {
+        string(name: 'stack_name', defaultValue: '', description: 'emeka CFT stack Name',)
+        choice(name: 'aws_region', choices: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'], description: 'AWS region to deploy emeka CFT',)
+        choice(name: 'stack_state', choices: ['create_stack', 'update_stack', 'delete_stack'], description: 'emeka CFT stack state',)
+    }
+    stages {
+        stage('clone down github repo') {
+            steps {
+                git branch: 'master',
+                    credentialsId: 'github_jenkins',
+                        url: 'https://github.com/oscarose/emeka-demo.git'
+            }
+        }
+        stage('deploy emeka CFT in the target aws region') {
+            when {
+                expression { params.stack_state == 'create_stack' }
+            }
+            steps {
+                script {
+                    sh """
+                    aws s3 mb s3://emekaogba --region ${aws_region}
+                    aws s3 cp $WORKSPACE/emekacicddemo.yaml s3://emekaogba
+                    aws cloudformation create-stack --stack-name ${stack_name} --template-url https://emekaogba.s3.amazonaws.com/emekacicddemo.yaml --region ${aws_region} --disable-rollback
+                    """
+                } 
+            }
+        }
+        stage('delete emeka CFT in the target aws region') {    
+            when {
+                expression { params.stack_state == 'delete_stack' }
+            }
+            steps {
+                script {
+                    sh """
+                    aws cloudformation delete-stack --stack-name ${stack_name}
+                    """
+                }
+            }
+        }
+    }
+}

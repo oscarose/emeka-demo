@@ -1,0 +1,143 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "Emeka cloudformation demo"
+
+Metadata:
+  TemplateAuthor: "Emeka Oruada"
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Main Parameters"
+        Parameters:
+          - "Environment"
+          - "StackName"
+          - "AmiId"
+          - "IamRole"
+          - "InstanceType"
+          - "KeyPair"
+
+Parameters:
+  Environment:
+    Type: String
+    Default: "EmekaUAT"
+    AllowedValues: [EmekaDev, EmekaTest, EmekaUAT]
+  StackName:
+    Type: String
+    Default: test-demo
+  AmiId:
+    Type: String
+    Default: ami-0394fe9914b475c53
+  IamRole:
+    Type: String
+    Default: emeka-cicd-iamrole
+  InstanceType:
+    Type: String
+    Default: t2.micro
+  KeyPair:
+    Type: String
+    Default: docker
+
+Mappings:
+  environment:
+    EmekaDev:
+      VpcId: vpc-0dfdf75de266be66c
+      VpcSubnet1: subnet-083336bfcd4003ac4
+      VpcSubnet2: subnet-0c46e95805a19f698
+      HostedZone: oscarose-ogba.com.
+
+    EmekaTest:
+      VpcId: vpc-0ab6568d3be2670ee
+      VpcSubnet1: subnet-056d0f01741c36b29
+      VpcSubnet2: subnet-09bd25d6feaefe6a5
+      HostedZone: oscarose-ogba.com.
+
+    EmekaUAT:
+      VpcId: vpc-3407ba4c
+      VpcSubnet1: subnet-445ba919
+      VpcSubnet2: subnet-46aa3b22
+      HostedZone: oscarose-ogba.com.
+
+
+Resources:
+  EmekaSG1:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Emeka demo SG
+      GroupName: EmekaSG
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Emeka demo SG
+        - Key: Team
+          Value: Emeka DevOps Team
+      VpcId: !FindInMap [environment, !Ref "Environment", VpcId]
+
+  EmekaSG2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Emeka2 demo SG
+      GroupName: EmekaSG2
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Emeka2 demo SG
+        - Key: Team
+          Value: Emeka DevOps Team
+      VpcId: !FindInMap [environment, !Ref "Environment", VpcId]
+
+  EmekaWebApp:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref KeyPair
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref IamRole
+      SubnetId: !FindInMap [environment, !Ref "Environment", VpcSubnet1]
+      Tags:
+        - Key: "Name"
+          Value: "Emeka-WebApp"
+        - Key: "Team"
+          Value: "Cloud-Team"
+      SecurityGroupIds: 
+        - !Ref EmekaSG1
+        - !Ref EmekaSG2
+      UserData:
+        Fn::Base64: |
+           #!/bin/bash
+           yum install wget -y
+           curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+           python get-pip.py
+           pip install awscli
+           mkdir /root/ansible-provisioners
+           cd /root/ansible-provisioners && aws s3 cp s3://emekacicddemo/epel-release-latest-7.noarch.rpm . && rpm -ivh epel-release-latest-7.noarch.rpm && cd
+           yum install ansible -y
+           cd /root/ansible-provisioners && aws s3 cp s3://emekacicddemo/jdk-8u231-linux-x64.tar.gz . && aws s3 cp s3://emekacicddemo/emeka.tar.gz . && tar xvf emeka.tar.gz && ansible-playbook jenkins_deploy.yaml -vvv > emeka.log && aws s3 cp /root/ansible-provisioners/emeka.log s3://emekacicddemo 
+
+  EmekaWebAppRoute53RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !FindInMap [environment, !Ref "Environment", HostedZone]
+      Name: !Join [".", [!Ref "Environment" , "oscarose-ogba" , "com"]]
+      Type: A
+      TTL: 900
+      ResourceRecords:
+      - Fn::GetAtt: EmekaWebApp.PublicIp
+    
+
