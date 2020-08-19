@@ -60,7 +60,7 @@ Mappings:
 
 
 Resources:
-  EmekaSG1:
+  EmekaSG11:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Emeka demo SG
@@ -81,7 +81,7 @@ Resources:
           Value: Emeka DevOps Team
       VpcId: !FindInMap [environment, !Ref "Environment", VpcId]
 
-  EmekaSG2:
+  EmekaSG22:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Emeka2 demo SG
@@ -116,8 +116,8 @@ Resources:
         - Key: "Team"
           Value: "Cloud-Team"
       SecurityGroupIds: 
-        - !Ref EmekaSG1
-        - !Ref EmekaSG2
+        - !Ref EmekaSG11
+        - !Ref EmekaSG22
       UserData:
         Fn::Base64: |
            #!/bin/bash
