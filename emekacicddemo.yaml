@@ -60,7 +60,7 @@ Mappings:
 
 
 Resources:
-  EmekaSGtest:
+  EmekaSG1:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Emeka demo SG
@@ -81,7 +81,7 @@ Resources:
           Value: Emeka DevOps Team
       VpcId: !FindInMap [environment, !Ref "Environment", VpcId]
 
-  EmekaSGtest2:
+  EmekaSG2:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Emeka2 demo SG
