@@ -64,7 +64,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Emeka demo SG
-      GroupName: EmekaSG
+      GroupName: EmekaSGdemo
       SecurityGroupIngress:
       - IpProtocol: tcp
         FromPort: 22
@@ -85,7 +85,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Emeka2 demo SG
-      GroupName: EmekaSG2
+      GroupName: EmekaSGtest
       SecurityGroupIngress:
       - IpProtocol: tcp
         FromPort: 443
